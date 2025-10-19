@@ -1,41 +1,36 @@
-// index.js (Vercel-compatible Express server)
-import express from "express";
+// index.js — Vercel proxy API
 import fetch from "node-fetch";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-const app = express();
 const BASE_URL = "https://app.base44.com";
 const API_KEY = process.env.BASE44_API_KEY;
 
-// ✅ Middleware
-app.use(express.json());
+// ✅ Default handler (Vercel's entry point)
+export default async function handler(req, res) {
+  const { query } = req;
+  const { entity } = query;
 
-// ✅ Root check route
-app.get("/", (req, res) => {
-  res.send("✅ Base44 Proxy is live");
-});
-
-// ✅ Proxy route
-app.get("/api/:entity", async (req, res) => {
-  const { entity } = req.params;
+  // Root route check
+  if (!entity) {
+    return res.status(200).json({
+      message: "✅ Base44 Proxy is live and running.",
+      usage: "/api?entity=products",
+    });
+  }
 
   try {
     const response = await fetch(
       `${BASE_URL}/api/apps/68db18dd8f74f41e05d13542/entities/${entity}`,
       {
-        headers: { Authorization: `Token ${API_KEY}` },
+        headers: {
+          Authorization: `Token ${API_KEY}`,
+        },
       }
     );
 
     const data = await response.json();
-    res.json(data);
+    return res.status(200).json(data);
   } catch (err) {
     console.error("Proxy error:", err);
-    res.status(500).json({ error: "Proxy request failed" });
+    return res.status(500).json({ error: "Proxy request failed" });
   }
-});
-
-// ✅ Export handler for Vercel
-export default app;
+}
